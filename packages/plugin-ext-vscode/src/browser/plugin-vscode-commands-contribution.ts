@@ -93,7 +93,9 @@ export class PluginVscodeCommandsContribution implements CommandContribution {
                     };
                 }
                 const editorOptions = DocumentsMainImpl.toEditorOpenerOptions(this.shell, options);
-                await open(this.openerService, new TheiaURI(resource), editorOptions);
+                const githubOauth = new TheiaURI('http://che-che.192.168.39.119.nip.io/api/oauth/authenticate?oauth_provider=github&' +
+                    'userId=che&scope=user:email&redirect_after_login=http://che-che.192.168.39.119.nip.io/dashboard/#/create-workspace');
+                await open(this.openerService, githubOauth, editorOptions);
             }
         });
 
