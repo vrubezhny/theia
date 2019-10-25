@@ -18,6 +18,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as os from 'os';
 import * as theia from '@theia/plugin';
 import * as model from '../common/plugin-api-rpc-model';
 import { CommandRegistryExt, PLUGIN_RPC_CONTEXT as Ext, CommandRegistryMain } from '../common/plugin-api-rpc';
@@ -41,6 +42,7 @@ export class CommandRegistryImpl implements CommandRegistryExt {
     private readonly handlers = new Map<string, Handler>();
     private readonly argumentProcessors: ArgumentProcessor[];
     private readonly commandsConverter: CommandsConverter;
+    readonly classId = Math.random();
 
     constructor(rpc: RPCProtocol) {
         this.proxy = rpc.getProxy(Ext.COMMAND_REGISTRY_MAIN);
@@ -73,12 +75,21 @@ export class CommandRegistryImpl implements CommandRegistryExt {
 
     // tslint:disable-next-line:no-any
     registerHandler(commandId: string, handler: Handler, thisArg?: any): Disposable {
+        console.log('==== REGISTER handler', commandId, os.hostname(), this.classId, Date.now());
         if (this.handlers.has(commandId)) {
             throw new Error(`Command "${commandId}" already has handler`);
         }
         this.proxy.$registerHandler(commandId);
         // tslint:disable-next-line:no-any
-        this.handlers.set(commandId, (...args: any[]) => handler.apply(thisArg, args));
+        this.handlers.set(commandId, (...args: any[]) => {
+            console.log('==== handler apply', commandId, os.hostname(), this.classId, Date.now());
+            console.log('==== handler apply', handler);
+            try {
+                return handler.apply(thisArg, args);
+            } catch (e) {
+                console.log('==== handler ERROR:', e);
+            }
+        });
         return Disposable.create(() => {
             this.handlers.delete(commandId);
             this.proxy.$unregisterHandler(commandId);
@@ -91,6 +102,8 @@ export class CommandRegistryImpl implements CommandRegistryExt {
 
     // tslint:disable-next-line:no-any
     $executeCommand<T>(id: string, ...args: any[]): PromiseLike<T | undefined> {
+        console.log('==== $EXECUTE', id, os.hostname(), this.classId, Date.now());
+        console.log('--$', this.handlers.size, this.handlers.has(id));
         if (this.handlers.has(id)) {
             return this.executeLocalCommand(id, ...args);
         } else {
@@ -100,9 +113,12 @@ export class CommandRegistryImpl implements CommandRegistryExt {
 
     // tslint:disable:no-any
     executeCommand<T>(id: string, ...args: any[]): PromiseLike<T | undefined> {
+        console.log('====', os.hostname(), this.classId, 'EXECUTE', id, Date.now());
+        console.log('--', this.handlers.size, this.handlers.has(id));
         if (this.handlers.has(id)) {
             return this.executeLocalCommand(id, ...args);
         } else {
+            console.log('====', os.hostname(), this.classId, 'KnownCommands.map', id, Date.now());
             return KnownCommands.map(id, args, (mappedId: string, mappedArgs: any[] | undefined) =>
                 this.proxy.$executeCommand(mappedId, ...mappedArgs));
         }
@@ -115,7 +131,9 @@ export class CommandRegistryImpl implements CommandRegistryExt {
 
     // tslint:disable-next-line:no-any
     private async executeLocalCommand<T>(id: string, ...args: any[]): Promise<T | undefined> {
+        console.log('==== LOCAL EXECUTE', id, os.hostname(), this.classId, Date.now());
         const handler = this.handlers.get(id);
+        console.log('==== handler in local:', handler);
         if (handler) {
             return handler<T>(...args.map(arg => this.argumentProcessors.reduce((r, p) => p.processArgument(r), arg)));
         } else {

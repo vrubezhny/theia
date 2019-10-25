@@ -14,6 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
+import * as os from 'os';
 import { injectable, inject } from 'inversify';
 import { ITokenTypeMap, IEmbeddedLanguagesMap, StandardTokenType } from 'vscode-textmate';
 import { TextmateRegistry, getEncodedLanguageId, MonacoTextmateService, GrammarDefinition } from '@theia/monaco/lib/browser/textmate';
@@ -34,6 +35,8 @@ import { DebugSchemaUpdater } from '@theia/debug/lib/browser/debug-schema-update
 
 @injectable()
 export class PluginContributionHandler {
+    readonly classId = Math.random();
+    readonly chostname = os.hostname();
 
     private injections = new Map<string, string[]>();
 
@@ -285,10 +288,13 @@ export class PluginContributionHandler {
     }
 
     registerCommand(command: Command): Disposable {
+        console.log('>>>> plugin-contrib-handler registerCommand', command.id, this.chostname, this.classId);
         const toDispose = new DisposableCollection();
-        toDispose.push(this.commands.registerCommand(command, {
+        const disp = this.commands.registerCommand(command, {
             execute: async (...args) => {
+                console.log('>>>> plugin-contrib-handler registerCommand EXECUTE', command.id, this.chostname, this.classId);
                 const handler = this.commandHandlers.get(command.id);
+                console.log('>>>> plugin-contrib-handler registerCommand EXECUTE', command.id, 'HANDLER:', handler, this.chostname, this.classId);
                 if (!handler) {
                     throw new Error(`command '${command.id}' not found`);
                 }
@@ -298,14 +304,24 @@ export class PluginContributionHandler {
             isEnabled(): boolean { return true; },
             // Visibility rules are defined via the `menus` contribution point.
             isVisible(): boolean { return true; }
-        }));
+        });
+        console.log('>>>> plugin-contrib-handler registerCommand DISP', disp, this.chostname, this.classId);
+        toDispose.push(disp);
+        console.log('>>>> plugin-contrib-handler registerCommand unset handler', command.id, this.chostname, this.classId);
         this.commandHandlers.set(command.id, undefined);
+        const res = '>>] ';
+        this.commandHandlers.forEach((value, key) => res + `[${key}] => ${value}, `);
+        console.log('>>>>] MAP plugin-contrib-handler registerCommand ID:', command.id, this.chostname, this.classId, res);
         toDispose.push(Disposable.create(() => this.commandHandlers.delete(command.id)));
         return toDispose;
     }
 
     registerCommandHandler(id: string, execute: CommandHandler['execute']): Disposable {
+        console.log('>>>> plugin-contrib-handler registerCommandHandler ID:', id, this.chostname, this.classId);
         this.commandHandlers.set(id, execute);
+        const res = '>> ';
+        this.commandHandlers.forEach((value, key) => res + `[${key}] => ${value}, `);
+        console.log('>>>> MAP plugin-contrib-handler registerCommandHandler ID:', id, this.chostname, this.classId, res);
         this.onDidRegisterCommandHandlerEmitter.fire(id);
         return Disposable.create(() => this.commandHandlers.set(id, undefined));
     }
