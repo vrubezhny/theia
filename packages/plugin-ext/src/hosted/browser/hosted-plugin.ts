@@ -53,6 +53,7 @@ import { Emitter, isCancelled } from '@theia/core';
 import { FrontendApplicationStateService } from '@theia/core/lib/browser/frontend-application-state';
 import { PluginViewRegistry } from '../../main/browser/view/plugin-view-registry';
 import { TaskProviderRegistry, TaskResolverRegistry } from '@theia/task/lib/browser/task-contribution';
+import { WebviewEnvironment } from '../../main/browser/webview/webview-environment';
 
 export type PluginHost = 'frontend' | string;
 export type DebugActivationEvent = 'onDebugResolve' | 'onDebugInitialConfigurations' | 'onDebugAdapterProtocolTracker';
@@ -126,6 +127,9 @@ export class HostedPluginSupport {
 
     @inject(ProgressService)
     protected readonly progressService: ProgressService;
+
+    @inject(WebviewEnvironment)
+    protected readonly webviewEnvironment: WebviewEnvironment;
 
     private theiaReadyPromise: Promise<any>;
 
@@ -372,7 +376,11 @@ export class HostedPluginSupport {
                 globalState,
                 workspaceState,
                 env: { queryParams: getQueryParameters(), language: navigator.language },
-                extApi
+                extApi,
+                webview: {
+                    webviewResourceRoot: this.webviewEnvironment.resourceRoot,
+                    webviewCspSource: this.webviewEnvironment.cspSource
+                }
             });
             if (toDisconnect.disposed) {
                 return undefined;
