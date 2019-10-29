@@ -64,6 +64,7 @@ import { LanguagesMainImpl } from './languages-main';
 import { OutputChannelRegistryMainImpl } from './output-channel-registry-main';
 import { InPluginFileSystemWatcherManager } from './in-plugin-filesystem-watcher-manager';
 import { WebviewWidget, WebviewWidgetIdentifier } from './webview/webview';
+import { WebviewEnvironment } from './webview/webview-environment';
 
 export default new ContainerModule((bind, unbind, isBound, rebind) => {
 
@@ -147,6 +148,7 @@ export default new ContainerModule((bind, unbind, isBound, rebind) => {
         }
     })).inSingletonScope();
 
+    bind(WebviewEnvironment).toSelf().inSingletonScope();
     bind(WebviewWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(({ container }) => ({
         id: WebviewWidget.FACTORY_ID,
