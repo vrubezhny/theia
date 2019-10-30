@@ -28,14 +28,21 @@ import { Deferred } from '@theia/core/lib/common/promise-util';
 import { WebviewEnvironment } from './webview-environment';
 import URI from '@theia/core/lib/common/uri';
 import { FileSystem } from '@theia/filesystem/lib/common/filesystem';
+import { Emitter } from '@theia/core/lib/common/event';
+import { open, OpenerService } from '@theia/core/lib/browser/opener-service';
+import { KeybindingRegistry } from '@theia/core/lib/browser/keybinding';
+import { Schemes } from '../../../common/uri-components';
 
 // tslint:disable:no-any
 
 export const enum WebviewMessageChannels {
+    onmessage = 'onmessage',
+    didClickLink = 'did-click-link',
     doUpdateState = 'do-update-state',
     doReload = 'do-reload',
     loadResource = 'load-resource',
-    webviewReady = 'webview-ready'
+    webviewReady = 'webview-ready',
+    didKeydown = 'did-keydown'
 }
 
 export interface WebviewContentOptions {
@@ -45,12 +52,6 @@ export interface WebviewContentOptions {
     readonly enableCommandUris?: boolean;
 }
 
-export interface WebviewEvents {
-    onMessage?(message: any): void;
-    onKeyboardEvent?(e: KeyboardEvent): void;
-    onLoad?(contentDocument: Document): void;
-}
-
 @injectable()
 export class WebviewWidgetIdentifier {
     id: string;
@@ -58,6 +59,13 @@ export class WebviewWidgetIdentifier {
 
 @injectable()
 export class WebviewWidget extends BaseWidget implements StatefulWidget {
+
+    private static readonly standardSupportedLinkSchemes = new Set([
+        Schemes.HTTP,
+        Schemes.HTTPS,
+        Schemes.MAILTO,
+        Schemes.VSCODE
+    ]);
 
     static FACTORY_ID = 'plugin-webview';
 
@@ -80,6 +88,12 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget {
     @inject(FileSystem)
     protected readonly fileSystem: FileSystem;
 
+    @inject(OpenerService)
+    protected readonly openerService: OpenerService;
+
+    @inject(KeybindingRegistry)
+    protected readonly keybindings: KeybindingRegistry;
+
     viewState: WebviewPanelViewState = {
         visible: false,
         active: false,
@@ -92,9 +106,11 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget {
 
     viewType: string;
     options: WebviewPanelOptions = {};
-    eventDelegate: WebviewEvents = {};
 
     protected readonly ready = new Deferred<void>();
+
+    protected readonly onMessageEmitter = new Emitter<any>();
+    readonly onMessage = this.onMessageEmitter.event;
 
     @postConstruct()
     protected init(): void {
@@ -102,6 +118,8 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget {
         this.id = WebviewWidget.FACTORY_ID + ':' + this.identifier.id;
         this.title.closable = true;
         this.addClass(WebviewWidget.Styles.WEBVIEW);
+
+        this.toDispose.push(this.onMessageEmitter);
 
         this.transparentOverlay = document.createElement('div');
         this.transparentOverlay.classList.add(MiniBrowserContentStyle.TRANSPARENT_OVERLAY);
@@ -134,6 +152,8 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget {
             this.ready.resolve();
         });
         this.toDispose.push(subscription);
+        this.toDispose.push(this.on(WebviewMessageChannels.onmessage, (data: any) => this.onMessageEmitter.fire(data)));
+        this.toDispose.push(this.on(WebviewMessageChannels.didClickLink, (uri: string) => this.openLink(new URI(uri))));
         this.toDispose.push(this.on(WebviewMessageChannels.doUpdateState, (state: any) => {
             this.state = state;
         }));
@@ -143,6 +163,12 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget {
             const normalizedPath = decodeURIComponent(rawPath);
             const uri = new URI(normalizedPath.replace(/^\/(\w+)\/(.+)$/, (_, scheme, path) => scheme + ':/' + path));
             this.loadResource(rawPath, uri);
+        }));
+        this.toDispose.push(this.on(WebviewMessageChannels.didKeydown, (data: KeyboardEvent) => {
+            // Electron: workaround for https://github.com/electron/electron/issues/14258
+            // We have to detect keyboard events in the <webview> and dispatch them to our
+            // keybinding service because these events do not bubble to the parent window anymore.
+            this.dispatchKeyDown(data);
         }));
     }
 
@@ -194,6 +220,30 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget {
 
     reload(): void {
         this.doUpdateContent();
+    }
+
+    protected dispatchKeyDown(event: KeyboardEventInit): void {
+        // Create a fake KeyboardEvent from the data provided
+        const emulatedKeyboardEvent = new KeyboardEvent('keydown', event);
+        // Force override the target
+        Object.defineProperty(emulatedKeyboardEvent, 'target', {
+            get: () => this.element,
+        });
+        // And re-dispatch
+        this.keybindings.run(emulatedKeyboardEvent);
+    }
+
+    protected openLink(link: URI): void {
+        if (this.isSupportedLink(link)) {
+            open(this.openerService, link);
+        }
+    }
+
+    protected isSupportedLink(link: URI): boolean {
+        if (WebviewWidget.standardSupportedLinkSchemes.has(link.scheme)) {
+            return true;
+        }
+        return !!this.contentOptions.enableCommandUris && link.scheme === Schemes.COMMAND;
     }
 
     protected async loadResource(requestPath: string, uri: URI): Promise<void> {
