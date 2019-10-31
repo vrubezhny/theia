@@ -318,6 +318,9 @@ export class TaskConfigurations implements Disposable {
                 problemMatcher.push(task.problemMatcher.name!);
             }
         }
+        if (task.group) {
+            customization.group = task.group;
+        }
         return {
             ...customization,
             problemMatcher: problemMatcher.map(name => name.startsWith('$') ? name : `$${name}`)
@@ -370,11 +373,14 @@ export class TaskConfigurations implements Disposable {
     }
 
     /**
-     * saves the names of the problem matchers to be used to parse the output of the given task to `tasks.json`
-     * @param task task that the problem matcher(s) are applied to
-     * @param problemMatchers name(s) of the problem matcher(s)
+     * Updates the task config in the `tasks.json`.
+     * The task config, together with updates, will be written into the `tasks.json` if it is not found in the file.
+     *
+     * @param task task that the updates will be applied to
+     * @param update the updates to be appplied
      */
-    async saveProblemMatcherForTask(task: TaskConfiguration, problemMatchers: string[]): Promise<void> {
+    // tslint:disable-next-line:no-any
+    async updateTaskConfig(task: TaskConfiguration, update: { [name: string]: any }): Promise<void> {
         const sourceFolderUri: string | undefined = this.getSourceFolderUriFromTask(task);
         if (!sourceFolderUri) {
             console.error('Global task cannot be customized');
@@ -396,12 +402,14 @@ export class TaskConfigurations implements Disposable {
                 });
                 jsonTasks[ind] = {
                     ...jsonTasks[ind],
-                    problemMatcher: problemMatchers.map(name => name.startsWith('$') ? name : `$${name}`)
+                    ...update
                 };
             }
             this.taskConfigurationManager.setTaskConfigurations(sourceFolderUri, jsonTasks);
         } else { // task is not in `tasks.json`
-            task.problemMatcher = problemMatchers;
+            Object.keys(update).forEach(taskProperty => {
+                task[taskProperty] = update[taskProperty];
+            });
             this.saveTask(sourceFolderUri, task);
         }
     }

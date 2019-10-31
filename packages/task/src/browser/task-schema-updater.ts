@@ -154,6 +154,44 @@ const taskConfigurationSchema: IJSONSchema = {
                         },
                         command: commandSchema,
                         args: commandArgSchema,
+                        group: {
+                            oneOf: [
+                                {
+                                    type: 'string'
+                                },
+                                {
+                                    type: 'object',
+                                    properties: {
+                                        kind: {
+                                            type: 'string',
+                                            default: 'none',
+                                            description: 'The task\'s execution group.'
+                                        },
+                                        isDefault: {
+                                            type: 'boolean',
+                                            default: false,
+                                            description: 'Defines if this task is the default task in the group.'
+                                        }
+                                    }
+                                }
+                            ],
+                            enum: [
+                                { kind: 'build', isDefault: true },
+                                { kind: 'test', isDefault: true },
+                                'build',
+                                'test',
+                                'none'
+                            ],
+                            enumDescriptions: [
+                                'Marks the task as the default build task.',
+                                'Marks the task as the default test task.',
+                                'Marks the task as a build task accessible through the \'Run Build Task\' command.',
+                                'Marks the task as a test task accessible through the \'Run Test Task\' command.',
+                                'Assigns the task to no group'
+                            ],
+                            // tslint:disable-next-line:max-line-length
+                            description: 'Defines to which execution group this task belongs to. It supports "build" to add it to the build group and "test" to add it to the test group.'
+                        },
                         options: commandOptionsSchema,
                         windows: {
                             type: 'object',
