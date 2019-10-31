@@ -41,7 +41,6 @@ import { open, OpenerService } from '@theia/core/lib/browser/opener-service';
 import { KeybindingRegistry } from '@theia/core/lib/browser/keybinding';
 import { Schemes } from '../../../common/uri-components';
 import { PluginSharedStyle } from '../plugin-shared-style';
-import { BuiltinThemeProvider } from '@theia/core/lib/browser/theming';
 import { WebviewThemeDataProvider } from './webview-theme-data-provider';
 
 // tslint:disable:no-any
@@ -246,7 +245,7 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget {
             const iconClass = `${this.identifier.id}-file-icon`;
             this.toDisposeOnIcon.push(this.sharedStyle.insertRule(
                 `.theia-webview-icon.${iconClass}::before`,
-                theme => `background-image: url(${theme.id === BuiltinThemeProvider.lightTheme.id ? lightIconUrl : darkIconUrl});`
+                theme => `background-image: url(${theme.type === 'light' ? lightIconUrl : darkIconUrl});`
             ));
             this.title.iconClass = `theia-webview-icon ${iconClass}`;
         } else {
