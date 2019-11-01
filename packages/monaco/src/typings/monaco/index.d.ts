@@ -538,7 +538,7 @@ declare module monaco.color {
         readonly id: string;
     }
     export interface ColorDefaults {
-        ligh?: string;
+        light?: string;
         dark?: string;
         hc?: string;
     }
