@@ -468,10 +468,6 @@ export class PreferencesTreeWidget extends TreeWidget {
         this.toDispose.push(this.onPreferenceSelectedEmitter);
 
         this.id = PreferencesTreeWidget.ID;
-
-        this.toDispose.push(this.preferenceSchemaProvider.onDidPreferenceSchemaChanged(() => {
-            this.initializeModel();
-        }));
     }
 
     dispose(): void {
@@ -481,6 +477,9 @@ export class PreferencesTreeWidget extends TreeWidget {
 
     protected onAfterAttach(msg: Message): void {
         this.initializeModel();
+        this.toDispose.push(this.preferenceSchemaProvider.onDidPreferenceSchemaChanged(() => {
+            this.initializeModel();
+        }));
         super.onAfterAttach(msg);
     }
 
