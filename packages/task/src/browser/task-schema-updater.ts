@@ -99,6 +99,7 @@ export class TaskSchemaUpdater {
             });
             customizedDetectedTask.properties!.problemMatcher = problemMatcher;
             customizedDetectedTask.properties!.options = commandOptionsSchema;
+            customizedDetectedTask.additionalProperties = true;
             customizedDetectedTasks.push(customizedDetectedTask);
         });
 
@@ -118,7 +119,8 @@ export class TaskSchemaUpdater {
                     }
                 },
                 inputs: inputsSchema.definitions!.inputs
-            }
+            },
+            additionalProperties: false
         };
     }
 
@@ -251,7 +253,8 @@ const processTaskConfigurationSchema: IJSONSchema = {
             properties: commandAndArgs
         },
         problemMatcher
-    }
+    },
+    additionalProperties: true
 };
 
 const customizedDetectedTasks: IJSONSchema[] = [];

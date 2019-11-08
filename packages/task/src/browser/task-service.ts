@@ -14,6 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
+import * as Ajv from 'ajv';
 import { ApplicationShell, FrontendApplication, WidgetManager } from '@theia/core/lib/browser';
 import { open, OpenerService } from '@theia/core/lib/browser/opener-service';
 import { ILogger } from '@theia/core/lib/common';
@@ -233,9 +234,26 @@ export class TaskService implements TaskConfigurationClient {
         return [...configuredTasks, ...notCustomizedProvidedTasks];
     }
 
-    /** Returns an array of the task configurations which are configured in tasks.json files */
-    getConfiguredTasks(): Promise<TaskConfiguration[]> {
-        return this.taskConfigurations.getTasks();
+    /** Returns an array of the valid task configurations which are configured in tasks.json files */
+    async getConfiguredTasks(): Promise<TaskConfiguration[]> {
+        const taskConfigs = await this.taskConfigurations.getTasks();
+        const validTaskConfigs = taskConfigs.filter(t => this.isTaskConfigValid(t));
+        if (validTaskConfigs.length !== taskConfigs.length) {
+            this.messageService.warn('Invalid task configurations are found. Open tasks.json and find details in the Problems view.');
+        }
+        return validTaskConfigs;
+    }
+
+    /**
+     * Returns `true` if the given task configuration is valid as per the task schema defined in Theia
+     * or contributed by Theia extensions and plugins, `false` otherwise.
+     */
+    isTaskConfigValid(task: TaskConfiguration): boolean {
+        const schema = this.taskSchemaUpdater.getTaskSchema();
+        const ajv = new Ajv();
+        const validateSchema = ajv.compile(schema);
+        const isValid = !!validateSchema({ tasks: [task] });
+        return isValid;
     }
 
     /** Returns an array of the task configurations which are provided by the extensions. */
