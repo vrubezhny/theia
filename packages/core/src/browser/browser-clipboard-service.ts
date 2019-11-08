@@ -84,12 +84,13 @@ export class BrowserClipboardService implements ClipboardService {
                     It can be enabled by 'dom.events.testing.asyncClipboard' preference on 'about:config' page. Then reload Theia.
                     Note, it will allow FireFox getting full access to the system clipboard.`);
                 }
-                throw new Error('Failed writing the clipboard.');
+                throw new Error('Failed writing to the clipboard.');
             }
         }
         if (permission.state === 'denied') {
             // most likely, the user intentionally denied the access
             this.messageService.warn("Access to the clipboard is denied. Check your browser's permission.");
+            return;
         }
         return this.getClipboardAPI().writeText(value);
     }
