@@ -56,7 +56,7 @@ export class BrowserClipboardService implements ClipboardService {
                     It can be enabled by 'dom.events.testing.asyncClipboard' preference on 'about:config' page. Then reload Theia.
                     Note, it will allow FireFox getting full access to the system clipboard.`);
                 }
-                throw new Error('Failed reading clipboard content.');
+                return '';
             }
         }
         if (permission.state === 'denied') {
@@ -84,7 +84,7 @@ export class BrowserClipboardService implements ClipboardService {
                     It can be enabled by 'dom.events.testing.asyncClipboard' preference on 'about:config' page. Then reload Theia.
                     Note, it will allow FireFox getting full access to the system clipboard.`);
                 }
-                throw new Error('Failed writing to the clipboard.');
+                return;
             }
         }
         if (permission.state === 'denied') {
