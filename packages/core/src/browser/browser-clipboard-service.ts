@@ -61,7 +61,7 @@ export class BrowserClipboardService implements ClipboardService {
         }
         if (permission.state === 'denied') {
             // most likely, the user intentionally denied the access
-            this.messageService.error("Access to the clipboard is denied. Check your browser's permission.");
+            this.messageService.warn("Access to the clipboard is denied. Check your browser's permission.");
             return '';
         }
         return this.getClipboardAPI().readText();
@@ -89,7 +89,7 @@ export class BrowserClipboardService implements ClipboardService {
         }
         if (permission.state === 'denied') {
             // most likely, the user intentionally denied the access
-            this.messageService.error("Access to the clipboard is denied. Check your browser's permission.");
+            this.messageService.warn("Access to the clipboard is denied. Check your browser's permission.");
         }
         return this.getClipboardAPI().writeText(value);
     }
